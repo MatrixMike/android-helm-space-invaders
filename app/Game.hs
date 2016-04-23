@@ -1,3 +1,13 @@
+--
+-- Original author: Alex Greif
+--
+-- This code heavily based on code here:
+-- https://github.com/agreif/hs-helm-samples/tree/master/space_invaders
+--
+-- Updated for latest version of Helm by Sean Seefried
+--
+
+
 module Game where
 
 import           FRP.Helm
