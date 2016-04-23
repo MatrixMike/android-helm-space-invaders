@@ -18,7 +18,9 @@ Flag android
   Default: False
 
 library
+    hs-source-dirs: app
     Exposed-modules: AndroidMain, Game
+    default-language: Haskell2010
     if flag(android)
       ghc-options: -O2 -static
       Buildable: True
@@ -33,7 +35,7 @@ library
 executable space-invaders
   hs-source-dirs: app
   main-is: Main.hs
-  other-modules:
+  other-modules: Game
   default-language: Haskell2010
   ghc-options: -O2 -threaded -rtsopts -Wall
   build-depends: base
