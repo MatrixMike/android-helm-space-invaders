@@ -1,13 +1,13 @@
-name:                helm-space-invaders
+name:                android-helm-space-invaders
 version:             0.1.0.0
-synopsis:            Initial project template from stack
+synopsis:            Helm version of Space Invaders for Android
 description:         Please see README.md
 homepage:            https://github.com/githubuser/helm-space-invaders#readme
 license:             BSD3
 license-file:        LICENSE
-author:              Author name here
-maintainer:          example@example.com
-copyright:           2016 Author name here
+author:              Alex Greif, Sean Seefried
+maintainer:          sean.seefried@gmail.com
+copyright:           2016 Alex Greif
 category:            Web
 build-type:          Simple
 -- extra-source-files:
@@ -25,6 +25,7 @@ library
       build-depends: base >= 4.7.0.0
                    , SDL2 == 0.1.0
                    , cairo == 0.13.0.5
+                   , elerea
                    , helm
     else
       buildable: False
