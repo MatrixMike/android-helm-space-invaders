@@ -10,6 +10,7 @@
 
 module Game where
 
+import           Control.Arrow
 import           FRP.Helm
 import           FRP.Helm.Time
 import qualified FRP.Helm.Window as Window
@@ -25,7 +26,7 @@ import Debug.Trace
 --
 
 cannonVelocity :: Double
-cannonVelocity = 100
+cannonVelocity = 150
 
 laserVelocity :: Double
 laserVelocity = 20
@@ -40,18 +41,19 @@ data Input =
     inpSpace  :: Bool
   , inpArrows :: (Int,Int)
   , inpDelta :: Time
-  }
+  } deriving (Read, Show, Eq)
 
 data CannonState = CannonState { cx :: Double, cy :: Double
                                , lx :: Double, ly :: Double
-                               , laserFlying :: Bool}
+                               , laserFlying :: Bool
+                               } deriving (Read, Show, Eq)
 
 data InvaderState = InvaderState { ix :: Double
                                  , iy :: Double
                                  , color :: Color
                                  , killed :: Bool
                                  , elapsed :: Time
-                                 }
+                                 } deriving (Read, Show, Eq)
 
 lyAbs :: CannonState -> Double
 lyAbs cannonState = cy cannonState - 15 - ly cannonState
@@ -66,27 +68,25 @@ gameInput = sampleOn delta <|
            <*> Keyboard.arrows
            <*> delta)
 
-cannonSignal :: Signal CannonState
-cannonSignal = signal
-  where
-    initialState = CannonState { cx = 0, cy = 200
-                               , lx = 0, ly = 0
-                               , laserFlying = False}
-    signal = foldp newState initialState gameInput
-    newState :: Input -> CannonState -> CannonState
-    newState inp state = state { cx = cx', lx = lx', ly = ly', laserFlying = laserFlying' }
-      where
-        (dx,_) = inpArrows inp
-        cx' = cx state + (fromIntegral dx * cannonVelocity * inpDelta inp)
-        laserFlying' = (inpSpace inp && ly state == 0) || (ly state /= 0 && ly state < laserUpperBound)
-        lx' | laserFlying' = lx state
-            | otherwise = cx'
-        ly' = if laserFlying' then ly state + laserVelocity else 0
+data Game =
+  Game {
+    cannon :: CannonState
+  , invaders :: [InvaderState]
+  }
 
-invaderSignal :: Signal [InvaderState]
-invaderSignal = foldp newStates initialStates combined
+initialCannon :: CannonState
+initialCannon = CannonState { cx = 0, cy = 200
+                            , lx = 0, ly = 0
+                            , laserFlying = False
+                            }
+
+
+
+
+
+initialInvaders :: [InvaderState]
+initialInvaders =  concat [row1, row2, row3, row4, row5]
   where
-    initialStates = concat [row1, row2, row3, row4, row5]
     xposs = [-210, -180, -150, -120, -90, -60, -30, 0, 30, 60]
     row1 = createRow (-100, red)
     row2 = createRow (-70, blue)
@@ -99,23 +99,53 @@ invaderSignal = foldp newStates initialStates combined
                                    , killed = False, elapsed = 0}) invaderPoss
         where
           invaderPoss = map (\x -> (x, yy)) xposs
-    combined = (,) <$> gameInput <*> cannonSignal
-    newStates :: (Input, CannonState) -> [InvaderState] -> [InvaderState]
-    newStates = map . newState
-    newState :: (Input, CannonState) -> InvaderState -> InvaderState
-    newState (inp, cannonState) state =
-      state { ix = ix'
+
+
+
+stepGame :: Input -> Game -> Game
+stepGame inp g = g { cannon = cannon', invaders = invaders' }
+  where
+    cannon' = stepCannon anyKilledByCannon (cannon g)
+    (invaders', anyKilledByCannon) = stepInvaders (invaders g)
+
+    stepCannon :: Bool -> CannonState -> CannonState
+    stepCannon anyKilledByCannon state =
+      state { cx = cx', lx = lx', ly = ly', laserFlying = laserFlying' }
+      where
+        (dx,_) = inpArrows inp
+        cx' = cx state + (fromIntegral dx * cannonVelocity * inpDelta inp)
+        laserFlying' = ((inpSpace inp && ly state == 0) ||
+                       (ly state /= 0 && ly state < laserUpperBound)) && (not anyKilledByCannon)
+        lx' | laserFlying' = lx state
+            | otherwise = cx'
+        ly' = if laserFlying' then ly state + laserVelocity else 0
+
+    stepInvaders :: [InvaderState] -> ([InvaderState],Bool)
+    stepInvaders ss = id *** any id $ unzip (map stepInvader ss)
+    stepInvader :: InvaderState -> (InvaderState, Bool)
+    stepInvader s = (invader', killedByCannon)
+      where
+        invader' =
+          s { ix = ix'
             , iy = iy'
             , killed = killed'
             , elapsed = elapsed'
             }
-      where
-        elapsed' = elapsed state + inpDelta inp
-        ix' = ix state
-        iy' = iy state
-        killed' = killed state
-                    || (laserFlying cannonState
-                        && sqrt ((lx cannonState - ix')^2 + (lyAbs cannonState - iy')^2) < 20)
+        elapsed' = elapsed s + inpDelta inp
+        ix' = ix s
+        iy' = iy s
+        killedByCannon = not (killed s) && laserFlying (cannon g)
+                               && collidesWith (lx (cannon g), lyAbs (cannon g)) (ix', iy')
+        killed' = killed s || killedByCannon
+
+collidesWith :: (Double, Double) -> (Double, Double) -> Bool
+collidesWith (x,y) (x',y') = (x'-x)^2 + (y-y')^2 < collisionRadius^2
+  where
+    collisionRadius = 20
+
+gameSignal :: Signal Game
+gameSignal = foldp stepGame (Game initialCannon initialInvaders) gameInput
+
 
 cannonForm :: CannonState -> Form
 cannonForm state = move (cx state, cy state) $ filled red $ rect 64 32
@@ -128,16 +158,16 @@ laserForm cannonState = move (lx', ly') $ filled white $ rect 2 10
 invaderForm :: InvaderState -> Form
 invaderForm s = move (ix s, iy s) $ filled (color s) $ rect 20 20
 
-render :: CannonState -> [InvaderState] -> (Int, Int) -> Element
-render cannonState invaderStates (w, h) =
-  centeredCollage w h $ [cannonForm cannonState,
-                         laserForm cannonState]
+render :: Game -> (Int, Int) -> Element
+render g (w, h) =
+  centeredCollage w h $ [cannonForm (cannon g),
+                         laserForm (cannon g)]
                          ++ map invaderForm liveInvaders
-    where liveInvaders = filter (not . killed) invaderStates
+    where liveInvaders = filter (not . killed) (invaders g)
 
 game :: IO ()
 game = do
-  run config $ render <~ cannonSignal ~~ invaderSignal ~~ Window.dimensions
+  run config $ render <~ gameSignal ~~ Window.dimensions
   where config = defaultConfig { windowTitle = "Space Invaders"
                                , windowIsFullscreen = False
                                , windowDimensions = (winWidth, winHeight)}
