@@ -4,10 +4,10 @@ packages:
 - .
 - location:
     git:    https://github.com/sseefried/helm
-    commit: 7a715a7a3f8fb071879984bc8b7c0d0baabf6a37
+    commit: bf80e29667bc799b048d47ff9c5bcd3406a46dd0
 - location:
     git:    https://github.com/sseefried/hsSDL2
-    commit: 3310dc870d840d18e81153fccc71dab4ed97f932
+    commit: 942be9e67f39c4804efcf6248284e58b675ed490
 - location:
     git:    https://github.com/sseefried/hs-cairo
     commit: 922c6fab2d632c220ebd3f07b737e75537bfda70

@@ -11,10 +11,12 @@
 module Game where
 
 import           Control.Arrow
+import           Control.Applicative
 import           FRP.Helm
 import           FRP.Helm.Time
 import qualified FRP.Helm.Window as Window
 import qualified FRP.Helm.Keyboard as Keyboard
+import qualified FRP.Helm.Touch as Touch
 
 import           FRP.Elerea.Param hiding (Signal)
 import           FRP.Helm.Sample
@@ -32,9 +34,10 @@ laserUpperBound = 300
 
 data Input =
   Input {
-    inpSpace  :: Bool
-  , inpArrows :: (Int,Int)
-  , inpDelta :: Time
+    inpSpace      :: Bool
+  , inpTouches    :: [(Float, Float)]
+  , inpArrows     :: (Int,Int)
+  , inpDelta      :: Time
   } deriving (Read, Show, Eq)
 
 data CannonState = CannonState { cx :: Double, cy :: Double
@@ -59,6 +62,7 @@ gameInput :: Signal Input
 gameInput = sampleOn delta <|
           (Input 
            <$> Keyboard.isDown Keyboard.SpaceKey
+           <*> Touch.positions
            <*> Keyboard.arrows
            <*> delta)
 
@@ -90,7 +94,8 @@ initialInvaders =  concat [row1, row2, row3, row4, row5]
         where
           invaderPoss = map (\x -> (x, yy)) xposs
 
-
+touchDown :: Input -> Bool
+touchDown g = inpSpace g || (not . null $ inpTouches g)
 
 stepGame :: Input -> Game -> Game
 stepGame inp g = g { cannon = cannon', invaders = invaders' }
@@ -104,7 +109,7 @@ stepGame inp g = g { cannon = cannon', invaders = invaders' }
       where
         (dx,_) = inpArrows inp
         cx' = cx state + (fromIntegral dx * cannonVelocity * inpDelta inp)
-        laserFlying' = ((inpSpace inp && ly state == 0) ||
+        laserFlying' = ((touchDown inp && ly state == 0) ||
                        (ly state /= 0 && ly state < laserUpperBound)) && (not anyKilledByCannon)
         lx' | laserFlying' = lx state
             | otherwise = cx'
