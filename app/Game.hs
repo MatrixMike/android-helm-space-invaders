@@ -19,8 +19,6 @@ import qualified FRP.Helm.Keyboard as Keyboard
 import           FRP.Elerea.Param hiding (Signal)
 import           FRP.Helm.Sample
 
-import Debug.Trace
-
 --
 -- Constants
 --
