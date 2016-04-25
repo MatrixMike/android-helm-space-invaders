@@ -25,13 +25,9 @@ import Debug.Trace
 -- Constants
 --
 
-cannonVelocity :: Double
-cannonVelocity = 150
-
-laserVelocity :: Double
-laserVelocity = 20
-
-laserUpperBound :: Double
+cannonVelocity, laserVelocity, laserUpperBound :: Double
+cannonVelocity  = 150
+laserVelocity   = 20
 laserUpperBound = 300
 
 ---
@@ -79,10 +75,6 @@ initialCannon = CannonState { cx = 0, cy = 200
                             , lx = 0, ly = 0
                             , laserFlying = False
                             }
-
-
-
-
 
 initialInvaders :: [InvaderState]
 initialInvaders =  concat [row1, row2, row3, row4, row5]
