@@ -4,7 +4,7 @@ packages:
 - .
 - location:
     git:    https://github.com/sseefried/helm
-    commit: bf80e29667bc799b048d47ff9c5bcd3406a46dd0
+    commit: c1dbc1d4748259c5db371ff4bbef8ae3d151572a
 - location:
     git:    https://github.com/sseefried/hsSDL2
     commit: 942be9e67f39c4804efcf6248284e58b675ed490

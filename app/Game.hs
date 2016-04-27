@@ -166,16 +166,17 @@ invaderForm s = move ((ix s), (iy s)) $ filled (color s) $ rect (4) (4)
 render :: Game -> (Int, Int) -> Element
 render g (w, h) =
   centeredCollage w h $ map (scale sf) $
-    [cannonForm  (cannon g), laserForm (cannon g)]
-     ++ map invaderForm liveInvaders
+    [cannonForm  (cannon g), laserForm (cannon g)] ++
+     map invaderForm liveInvaders
     where
       liveInvaders = filter (not . killed) (invaders g)
       sf = fromIntegral (min w h ) / worldWidth
 
 game :: Bool -> IO ()
 game isMobile = do
-  run config $ render <~ gameSignal ~~ Window.dimensions
+  runAndQuitOnSignal config qPressed $ render <~ gameSignal ~~ Window.dimensions
   where
+    qPressed = Keyboard.isDown Keyboard.QKey
     config =
       case isMobile of
         True -> defaultConfig { windowIsFullscreen = True }
