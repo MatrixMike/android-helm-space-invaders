@@ -13,7 +13,5 @@ import Game (game)
 
 foreign export ccall "haskell_main" main :: CString -> IO ()
 
--- FIXME: sseefried: Remove need for resource path
-
 main :: CString -> IO ()
-main _ = game
+main _ = game True

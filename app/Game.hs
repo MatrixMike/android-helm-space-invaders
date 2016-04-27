@@ -25,10 +25,18 @@ import           FRP.Helm.Sample
 -- Constants
 --
 
+--
+-- World co-ordinates are a box 100x100 pixels
+--
+
+worldWidth :: Double
+worldWidth = 100
 cannonVelocity, laserVelocity, laserUpperBound :: Double
-cannonVelocity  = 150
-laserVelocity   = 20
-laserUpperBound = 300
+cannonVelocity  = 50
+laserVelocity   = 4
+laserUpperBound = 60
+
+
 
 ---
 
@@ -53,7 +61,7 @@ data InvaderState = InvaderState { ix :: Double
                                  } deriving (Read, Show, Eq)
 
 lyAbs :: CannonState -> Double
-lyAbs cannonState = cy cannonState - 15 - ly cannonState
+lyAbs cannonState = cy cannonState - 3 - ly cannonState
 
 delta :: Signal Time
 delta = fmap inSeconds (fps 35)
@@ -73,7 +81,7 @@ data Game =
   }
 
 initialCannon :: CannonState
-initialCannon = CannonState { cx = 0, cy = 200
+initialCannon = CannonState { cx = 0, cy = 40
                             , lx = 0, ly = 0
                             , laserFlying = False
                             }
@@ -81,12 +89,12 @@ initialCannon = CannonState { cx = 0, cy = 200
 initialInvaders :: [InvaderState]
 initialInvaders =  concat [row1, row2, row3, row4, row5]
   where
-    xposs = [-210, -180, -150, -120, -90, -60, -30, 0, 30, 60]
-    row1 = createRow (-100, red)
-    row2 = createRow (-70, blue)
-    row3 = createRow (-40, blue)
-    row4 = createRow (-10, green)
-    row5 = createRow (20, green)
+    xposs = [-42, -36, -30, -24, -18, -12, -6, 0, 6, 12]
+    row1 = createRow (-20, red)
+    row2 = createRow (-14, blue)
+    row3 = createRow (-8, blue)
+    row4 = createRow (-2, green)
+    row5 = createRow (4, green)
     createRow :: (Double, Color) -> [InvaderState]
     createRow (yy, color) =
       map (\(x, y) -> InvaderState { ix = x, iy = y, color = color
@@ -136,35 +144,44 @@ stepGame inp g = g { cannon = cannon', invaders = invaders' }
 collidesWith :: (Double, Double) -> (Double, Double) -> Bool
 collidesWith (x,y) (x',y') = (x'-x)^2 + (y-y')^2 < collisionRadius^2
   where
-    collisionRadius = 20
+    collisionRadius = 4
 
 gameSignal :: Signal Game
 gameSignal = foldp stepGame (Game initialCannon initialInvaders) gameInput
 
 
-cannonForm :: CannonState -> Form
-cannonForm state = move (cx state, cy state) $ filled red $ rect 64 32
+cannonForm :: Double -> CannonState -> Form
+cannonForm scale state = move (scale*cx state, scale*cy state) $
+                           filled red $ rect (scale*10) (scale*5)
 
-laserForm :: CannonState -> Form
-laserForm cannonState = move (lx', ly') $ filled white $ rect 2 10
+laserForm :: Double -> CannonState -> Form
+laserForm scale cannonState = move (scale*lx', scale*ly') $
+                                filled white $ rect (scale*0.4) (scale*2)
   where lx' = lx cannonState
         ly' = lyAbs cannonState
 
-invaderForm :: InvaderState -> Form
-invaderForm s = move (ix s, iy s) $ filled (color s) $ rect 20 20
+invaderForm :: Double -> InvaderState -> Form
+invaderForm scale s = move (scale*(ix s), scale*(iy s)) $ filled (color s) $ rect (scale*4) (scale*4)
 
 render :: Game -> (Int, Int) -> Element
 render g (w, h) =
-  centeredCollage w h $ [cannonForm (cannon g),
-                         laserForm (cannon g)]
-                         ++ map invaderForm liveInvaders
-    where liveInvaders = filter (not . killed) (invaders g)
+  centeredCollage w h $ [cannonForm scale (cannon g),
+                         laserForm scale (cannon g)]
+                         ++ map (invaderForm scale) liveInvaders
+    where
+      liveInvaders = filter (not . killed) (invaders g)
+      scale = fromIntegral (min w h ) / worldWidth
 
-game :: IO ()
-game = do
+game :: Bool -> IO ()
+game isMobile = do
   run config $ render <~ gameSignal ~~ Window.dimensions
-  where config = defaultConfig { windowTitle = "Space Invaders"
-                               , windowIsFullscreen = False
-                               , windowDimensions = (winWidth, winHeight)}
-        (winWidth, winHeight) = (500, 500)
+  where
+    config =
+      case isMobile of
+        True -> defaultConfig { windowIsFullscreen = True }
+        False -> 
+          defaultConfig { windowTitle = "Space Invaders"
+                                 , windowIsFullscreen = False
+                                 , windowDimensions = (winWidth, winHeight)}
+    (winWidth, winHeight) = (500, 500)
 

@@ -4,4 +4,4 @@ import Game
 
 
 main :: IO ()
-main = game
+main = game False
