@@ -150,27 +150,27 @@ gameSignal :: Signal Game
 gameSignal = foldp stepGame (Game initialCannon initialInvaders) gameInput
 
 
-cannonForm :: Double -> CannonState -> Form
-cannonForm scale state = move (scale*cx state, scale*cy state) $
-                           filled red $ rect (scale*10) (scale*5)
+cannonForm :: CannonState -> Form
+cannonForm state = move (cx state, cy state) $
+                           filled red $ rect (10) (5)
 
-laserForm :: Double -> CannonState -> Form
-laserForm scale cannonState = move (scale*lx', scale*ly') $
-                                filled white $ rect (scale*0.4) (scale*2)
+laserForm :: CannonState -> Form
+laserForm cannonState = move (lx', ly') $
+                                filled white $ rect (0.4) (2)
   where lx' = lx cannonState
         ly' = lyAbs cannonState
 
-invaderForm :: Double -> InvaderState -> Form
-invaderForm scale s = move (scale*(ix s), scale*(iy s)) $ filled (color s) $ rect (scale*4) (scale*4)
+invaderForm :: InvaderState -> Form
+invaderForm s = move ((ix s), (iy s)) $ filled (color s) $ rect (4) (4)
 
 render :: Game -> (Int, Int) -> Element
 render g (w, h) =
-  centeredCollage w h $ [cannonForm scale (cannon g),
-                         laserForm scale (cannon g)]
-                         ++ map (invaderForm scale) liveInvaders
+  centeredCollage w h $ map (scale sf) $
+    [cannonForm  (cannon g), laserForm (cannon g)]
+     ++ map invaderForm liveInvaders
     where
       liveInvaders = filter (not . killed) (invaders g)
-      scale = fromIntegral (min w h ) / worldWidth
+      sf = fromIntegral (min w h ) / worldWidth
 
 game :: Bool -> IO ()
 game isMobile = do
